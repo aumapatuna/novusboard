@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NovusBoard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Favicon link -->
+    <link rel="icon" type="image/png" href="favicon.png">
+
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+
+<body>
+    <div class="dashboard-container" id="mainDashboard" style="display: none;">
+        <div
+            style="display: flex; justify-content: flex-end; padding-top: 1rem; margin-bottom: -1rem; z-index: 10; position: relative;">
+            <div id="userProfile"
+                style="display: flex; align-items: center; gap: 1rem; background: var(--panel-bg); padding: 0.5rem 1rem; border-radius: 2rem; border: 1px solid var(--panel-border); backdrop-filter: blur(10px);">
+                <span id="currentUserEmail"
+                    style="font-size: 0.9rem; font-weight: 500; color: var(--text-primary);"></span>
+                <button id="logoutBtn" class="action-btn" title="Logout" style="padding: 0.25rem;">
+                    <i data-lucide="log-out"></i>
+                </button>
+            </div>
+        </div>
+        <header class="header">
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <img src="logo.png" alt="NovusBoard Logo"
+                    style="height: 60px; width: 60px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                <div>
+                    <h1 style="margin: 0; line-height: 1.2;">NovusBoard</h1>
+                    <p style="margin: 0;">Manage your tasks efficiently and beautifully.</p>
+                </div>
+            </div>
+            <div class="stats">
+                <div class="stat-box status-todo">
+                    <span class="stat-value" id="stat-todo">0</span>
+                    <span class="stat-label">To Do</span>
+                </div>
+                <div class="stat-box status-inprogress">
+                    <span class="stat-value" id="stat-inprogress">0</span>
+                    <span class="stat-label">In Progress</span>
+                </div>
+                <div class="stat-box status-resolved">
+                    <span class="stat-value" id="stat-resolved">0</span>
+                    <span class="stat-label">Resolved</span>
+                </div>
+                <div class="stat-box status-notdone">
+                    <span class="stat-value" id="stat-notdone">0</span>
+                    <span class="stat-label">Not Done</span>
+                </div>
+                <div class="stat-box status-closed">
+                    <span class="stat-value" id="stat-closed">0</span>
+                    <span class="stat-label">Closed</span>
+                </div>
+                <div class="stat-box status-onhold">
+                    <span class="stat-value" id="stat-onhold">0</span>
+                    <span class="stat-label">On Hold</span>
+                </div>
+                <div class="stat-box status-holiday">
+                    <span class="stat-value" id="stat-holiday">0</span>
+                    <span class="stat-label">Holiday</span>
+                </div>
+                <div class="stat-box"
+                    style="background: rgba(59, 130, 246, 0.15); border-color: rgba(59, 130, 246, 0.3);">
+                    <span class="stat-value" id="totalTasks">0</span>
+                    <span class="stat-label">Total</span>
+                </div>
+        </header>
+
+        <section class="form-section glass-panel">
+            <h2>Add New Task</h2>
+            <form id="taskForm">
+                <div class="form-group">
+                    <label for="taskDate">Date</label>
+                    <input type="date" id="taskDate" required>
+                </div>
+                <div class="form-group task-input">
+                    <label for="taskName">Task</label>
+                    <input type="text" id="taskName" placeholder="What needs to be done?" required>
+                </div>
+                <div class="form-group">
+                    <label for="taskStatus">Status</label>
+                    <div class="select-wrapper">
+                        <select id="taskStatus" required>
+                            <option value="To Do" selected>To Do</option>
+                            <option value="Inprogress">Inprogress</option>
+                            <option value="Resolved">Resolved</option>
+                            <option value="Not Done">Not Done</option>
+                            <option value="Closed">Closed</option>
+                            <option value="On Hold">On Hold</option>
+                            <option value="Holiday">Holiday</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="select-icon"></i>
+                    </div>
+                </div>
+                <div class="form-group comment-input">
+                    <label for="taskComment">Comment</label>
+                    <input type="text" id="taskComment" placeholder="Add any notes...">
+                </div>
+                <div class="form-group button-group">
+                    <button type="submit" class="primary-btn">
+                        <i data-lucide="plus"></i>
+                        Add Task
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <section class="table-section glass-panel">
+            <div class="table-header-action"
+                style="flex-direction: column; align-items: flex-start; gap: 1.5rem; margin-bottom: 1.5rem;">
+                <!-- Top Row: Title & Data Tools -->
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 1rem;">
+                    <h2 style="margin: 0;">Your Tasks</h2>
+
+                    <div class="data-actions" style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                        <input type="file" id="csvFileInput" accept=".csv" style="display: none;">
+                        <button id="importCsvBtn" class="tool-btn">
+                            <i data-lucide="upload"></i> Import CSV
+                        </button>
+                        <button id="exportCsvBtn" class="tool-btn">
+                            <i data-lucide="download"></i> Export CSV
+                        </button>
+                        <button id="openReportModalBtn" class="tool-btn primary-tool">
+                            <i data-lucide="file-text"></i> Report
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Bottom Row: Filters & Search -->
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 1rem;">
+                    <div class="filters">
+                        <button class="filter-btn active" data-filter="all">All</button>
+                        <button class="filter-btn" data-filter="To Do">To Do</button>
+                        <button class="filter-btn" data-filter="Inprogress">Inprogress</button>
+                        <button class="filter-btn" data-filter="Resolved">Resolved</button>
+                        <button class="filter-btn" data-filter="Not Done">Not Done</button>
+                        <button class="filter-btn" data-filter="Closed">Closed</button>
+                        <button class="filter-btn" data-filter="On Hold">On Hold</button>
+                        <button class="filter-btn" data-filter="Holiday">Holiday</button>
+                    </div>
+
+                    <div class="search-container"
+                        style="display: flex; align-items: center; position: relative; flex: 1; min-width: 250px; max-width: 400px;">
+                        <i data-lucide="search"
+                            style="position: absolute; left: 1rem; color: var(--text-secondary); width: 1.25rem; height: 1.25rem; pointer-events: none;"></i>
+                        <input type="text" id="searchInput" placeholder="Search tasks..."
+                            style="width: 100%; padding-left: 3rem; background: rgba(15, 23, 42, 0.6);">
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-container">
+                <table id="taskTable">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Task</th>
+                            <th>Status</th>
+                            <th>Comment</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="taskList">
+                        <!-- Tasks will be injected here via JS -->
+                    </tbody>
+                </table>
+                <div id="emptyState" class="empty-state">
+                    <i data-lucide="clipboard-list" class="empty-icon"></i>
+                    <p>No tasks found. Start by adding one above!</p>
+                </div>
+            </div>
+            <div id="pagination" class="pagination-container"></div>
+        </section>
+    </div>
+
+    <div id="pasteModal" class="modal">
+        <div class="modal-content glass-panel">
+            <span class="close-btn" onclick="closePasteModal()">&times;</span>
+            <h2>Paste Tasks</h2>
+            <p>Select a new date to paste the copied tasks:</p>
+            <div class="form-group" style="margin: 1.5rem 0;">
+                <label for="pasteDate">Target Date</label>
+                <input type="date" id="pasteDate" required style="width: 100%;">
+            </div>
+            <div class="button-group">
+                <button class="primary-btn" onclick="confirmPaste()">
+                    <i data-lucide="clipboard-paste"></i> Paste Tasks
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Task Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content glass-panel" style="max-width: 500px;">
+            <span class="close-btn" onclick="closeEditModal()">&times;</span>
+            <h2>Edit Task</h2>
+            <form id="editTaskForm" style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1rem;">
+                <div class="form-group">
+                    <label for="editTaskDate">Date</label>
+                    <input type="date" id="editTaskDate" required style="width: 100%;">
+                </div>
+                <div class="form-group">
+                    <label for="editTaskName">Task</label>
+                    <input type="text" id="editTaskName" required style="width: 100%;">
+                </div>
+                <div class="form-group">
+                    <label for="editTaskStatus">Status</label>
+                    <div class="select-wrapper">
+                        <select id="editTaskStatus" required style="width: 100%;">
+                            <option value="To Do">To Do</option>
+                            <option value="Inprogress">Inprogress</option>
+                            <option value="Resolved">Resolved</option>
+                            <option value="Not Done">Not Done</option>
+                            <option value="Closed">Closed</option>
+                            <option value="On Hold">On Hold</option>
+                            <option value="Holiday">Holiday</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="select-icon"></i>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="editTaskComment">Comment</label>
+                    <input type="text" id="editTaskComment" style="width: 100%;">
+                </div>
+                <div class="form-group button-group" style="align-self: flex-end; margin-top: 0.5rem;">
+                    <button type="submit" class="primary-btn">
+                        <i data-lucide="save"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Report Modal -->
+    <div class="modal" id="reportModal">
+        <div class="modal-content glass-panel" style="max-width: 500px;">
+            <span class="close-btn" id="closeReportModalBtn">&times;</span>
+            <h2>Generate NovusBoard Report</h2>
+
+            <div class="report-controls" style="margin-top: 1.5rem;">
+                <div class="form-group">
+                    <label for="reportTimeframe">Select Timeframe</label>
+                    <div class="select-wrapper">
+                        <select id="reportTimeframe" class="form-input" style="width: 100%;">
+                            <option value="daily">Daily Summary (Today)</option>
+                            <option value="weekly">Weekly Summary (Last 7 Days)</option>
+                            <option value="monthly">Monthly Summary (Last 30 Days)</option>
+                            <option value="yearly">Yearly Summary (This Year)</option>
+                        </select>
+                        <i data-lucide="chevron-down" class="select-icon"></i>
+                    </div>
+                </div>
+                <button class="primary-btn" id="downloadPdfBtn"
+                    style="margin-top: 1.5rem; width: 100%; justify-content: center;">
+                    <i data-lucide="download"></i> Download PDF Report
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Hidden Printable Canvas -->
+    <div id="printableReport" class="printable-report"
+        style="position: absolute; left: -9999px; top: -9999px; width: 800px; background: white; color: black; padding: 40px; box-sizing: border-box;">
+        <!-- Content gets injected here -->
+    </div>
+
+    <!-- Auth Overlay -->
+    <div id="authOverlay" class="auth-overlay">
+        <div class="auth-box glass-panel">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <img src="logo.png" alt="NovusBoard Logo"
+                    style="height: 60px; width: 60px; border-radius: 12px; margin-bottom: 1rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2);">
+                <h2
+                    style="margin: 0; font-size: 1.75rem; background: linear-gradient(135deg, #fff, #94a3b8); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                    NovusBoard</h2>
+                <p style="color: var(--text-secondary); margin-top: 0.5rem;" id="authSubtitle">Sign in to manage your
+                    tasks</p>
+            </div>
+
+            <form id="authForm" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                <div class="form-group">
+                    <label for="authEmail">Email</label>
+                    <input type="email" id="authEmail" required placeholder="your@email.com" autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="authPassword">Password</label>
+                    <div style="position: relative; width: 100%;">
+                        <input type="password" id="authPassword" required placeholder="••••••••"
+                            autocomplete="current-password"
+                            style="padding-right: 2.5rem; width: 100%; box-sizing: border-box;">
+                        <button type="button" id="togglePasswordBtn" class="action-btn"
+                            style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); padding: 0.25rem; display: flex; align-items: center; justify-content: center;">
+                            <i data-lucide="eye" id="togglePasswordIcon" style="width: 1.2rem; height: 1.2rem;"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="authError"
+                    style="color: var(--danger); font-size: 0.85rem; text-align: center; display: none;"></div>
+                <button type="submit" class="primary-btn" id="authSubmitBtn"
+                    style="justify-content: center; margin-top: 0.5rem;">
+                    Sign In
+                </button>
+
+                <p style="text-align: center; font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.5rem;">
+                    <span id="authToggleText">Don't have an account?</span>
+                    <a href="#" id="authToggleBtn"
+                        style="color: var(--accent-color); text-decoration: none; font-weight: 500; margin-left: 0.25rem;">Sign
+                        Up</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+
+</html>
