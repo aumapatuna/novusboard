@@ -1,3 +1,18 @@
+// Firebase Configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyAaaNlsh8KDvY5o2sh7SU6nRCCRiSIAcGc",
+    authDomain: "novusboard.firebaseapp.com",
+    projectId: "novusboard",
+    storageBucket: "novusboard.firebasestorage.app",
+    messagingSenderId: "377879477960",
+    appId: "1:377879477960:web:0533231d26095c31836ffd"
+};
+
+// Initialize Firebase
+const app = firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
 // State management
 let currentUser = null; // Currently logged in user's email
 let tasks = [];
@@ -103,22 +118,33 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Load tasks from local storage
-function loadTasks() {
+// Load tasks from Firestore
+async function loadTasks() {
     if (!currentUser) return;
-    const savedTasks = localStorage.getItem(`dashboardTasks_${currentUser}`);
-    if (savedTasks) {
-        tasks = JSON.parse(savedTasks);
-    } else {
-        tasks = []; // Reset tasks if the user has none
+    try {
+        const doc = await db.collection("users").doc(currentUser).get();
+        if (doc.exists && doc.data().tasks) {
+            tasks = doc.data().tasks;
+        } else {
+            tasks = [];
+        }
+    } catch (err) {
+        console.error("Error loading tasks:", err);
+        tasks = [];
     }
     renderTasks();
 }
 
-// Save tasks to local storage
-function saveTasks() {
+// Save tasks to Firestore
+async function saveTasks() {
     if (!currentUser) return;
-    localStorage.setItem(`dashboardTasks_${currentUser}`, JSON.stringify(tasks));
+    try {
+        await db.collection("users").doc(currentUser).set({
+            tasks: tasks
+        }, { merge: true });
+    } catch (err) {
+        console.error("Error saving tasks:", err);
+    }
     updateStats();
 }
 
@@ -889,67 +915,58 @@ authToggleBtn.addEventListener('click', (e) => {
     updateAuthUI();
 });
 
-authForm.addEventListener('submit', (e) => {
+authForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = authEmail.value.trim().toLowerCase();
     const password = authPassword.value;
 
-    if (!email || !password) {
-        showAuthError('Please fill in all fields.');
+    if (!email) {
+        showAuthError('Please enter an email.');
         return;
     }
 
-    // Get users DB from local storage
-    let users = JSON.parse(localStorage.getItem('novusUsers') || '{}');
+    try {
+        authSubmitBtn.disabled = true;
+        authSubmitBtn.textContent = 'Please wait...';
 
-    if (authMode === 'login') {
-        // Handle Login
-        if (users[email] && users[email] === password) {
-            // Success
-            localStorage.setItem('novusSession', email);
+        if (authMode === 'login') {
+            await auth.signInWithEmailAndPassword(email, password);
             authEmail.value = '';
             authPassword.value = '';
             authError.style.display = 'none';
-            initAuth();
-        } else {
-            showAuthError('Invalid email or password.');
-        }
-    } else if (authMode === 'signup') {
-        // Handle Sign Up
-        if (users[email]) {
-            showAuthError('An account with this email already exists.');
-        } else {
-            users[email] = password;
-            localStorage.setItem('novusUsers', JSON.stringify(users));
-            // Log them in automatically
-            localStorage.setItem('novusSession', email);
+        } else if (authMode === 'signup') {
+            await auth.createUserWithEmailAndPassword(email, password);
             authEmail.value = '';
             authPassword.value = '';
             authError.style.display = 'none';
-            initAuth();
-            alert('Account created successfully!');
-        }
-    } else if (authMode === 'forgot') {
-        // Handle Forgot Password
-        if (users[email]) {
-            users[email] = password;
-            localStorage.setItem('novusUsers', JSON.stringify(users));
+        } else if (authMode === 'forgot') {
+            await auth.sendPasswordResetEmail(email);
             authMode = 'login';
             updateAuthUI();
             authPassword.value = '';
             showAuthError(''); // Clear error
-            alert('Password reset successfully! You can now log in.');
-        } else {
-            showAuthError('No account found with this email address.');
+            alert('Password reset link sent to your email!');
         }
+    } catch (error) {
+        let errorMessage = "An error occurred.";
+        if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+            errorMessage = "Invalid email or password.";
+        } else if (error.code === 'auth/email-already-in-use') {
+            errorMessage = "An account with this email already exists.";
+        } else if (error.code === 'auth/weak-password') {
+            errorMessage = "Password should be at least 6 characters.";
+        } else {
+            errorMessage = error.message;
+        }
+        showAuthError(errorMessage);
+    } finally {
+        authSubmitBtn.disabled = false;
+        updateAuthUI();
     }
 });
 
-logoutBtn.addEventListener('click', () => {
-    localStorage.removeItem('novusSession');
-    tasks = []; // Clear tasks from memory
-    renderTasks();
-    initAuth();
+logoutBtn.addEventListener('click', async () => {
+    await auth.signOut();
 });
 
 function showAuthError(message) {
@@ -957,24 +974,31 @@ function showAuthError(message) {
     authError.style.display = 'block';
 }
 
+// Firebase Auth State Listener
 function initAuth() {
-    const sessionToken = localStorage.getItem('novusSession');
-    if (sessionToken) {
-        // User is logged in
-        currentUser = sessionToken;
-        if (authOverlay) authOverlay.style.display = 'none';
-        if (mainDashboard) mainDashboard.style.display = 'flex';
-        if (currentUserEmailEl) currentUserEmailEl.textContent = currentUser;
-        loadTasks(); // Load tasks specific to this user
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            // User is logged in
+            currentUser = user.email;
+            if (authOverlay) authOverlay.style.display = 'none';
+            if (mainDashboard) mainDashboard.style.display = 'flex';
+            if (currentUserEmailEl) currentUserEmailEl.textContent = currentUser;
+            loadTasks(); // Load tasks from firestore specific to this user
 
-        // Refresh icons if new content appeared
-        if (window.lucide) {
-            lucide.createIcons();
+            // Refresh icons if new content appeared
+            if (window.lucide) {
+                lucide.createIcons();
+            }
+        } else {
+            // Not logged in
+            currentUser = null;
+            tasks = [];
+            renderTasks();
+            if (authOverlay) authOverlay.style.display = 'flex';
+            if (mainDashboard) mainDashboard.style.display = 'none';
+            if (authPassword) authPassword.value = '';
+            authMode = 'login';
+            updateAuthUI();
         }
-    } else {
-        // Not logged in
-        currentUser = null;
-        if (authOverlay) authOverlay.style.display = 'flex';
-        if (mainDashboard) mainDashboard.style.display = 'none';
-    }
+    });
 }
