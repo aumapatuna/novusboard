@@ -292,8 +292,8 @@
                     <label for="authEmail">Email</label>
                     <input type="email" id="authEmail" required placeholder="your@email.com" autocomplete="email">
                 </div>
-                <div class="form-group">
-                    <label for="authPassword">Password</label>
+                <div class="form-group" id="authPasswordGroup">
+                    <label for="authPassword" id="authPasswordLabel">Password</label>
                     <div style="position: relative; width: 100%;">
                         <input type="password" id="authPassword" required placeholder="••••••••"
                             autocomplete="current-password"
@@ -302,6 +302,11 @@
                             style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); padding: 0.25rem; display: flex; align-items: center; justify-content: center;">
                             <i data-lucide="eye" id="togglePasswordIcon" style="width: 1.2rem; height: 1.2rem;"></i>
                         </button>
+                    </div>
+                    <div style="text-align: right; margin-top: 0.25rem;">
+                        <a href="#" id="authForgotPasswordBtn"
+                            style="color: var(--accent-color); text-decoration: none; font-size: 0.8rem; font-weight: 500;">Forgot
+                            Password?</a>
                     </div>
                 </div>
                 <div id="authError"

@@ -48,8 +48,11 @@ const logoutBtn = document.getElementById('logoutBtn');
 const currentUserEmailEl = document.getElementById('currentUserEmail');
 const togglePasswordBtn = document.getElementById('togglePasswordBtn');
 const togglePasswordIcon = document.getElementById('togglePasswordIcon');
+const authPasswordGroup = document.getElementById('authPasswordGroup');
+const authPasswordLabel = document.getElementById('authPasswordLabel');
+const authForgotPasswordBtn = document.getElementById('authForgotPasswordBtn');
 
-let isLoginMode = true; // true = Login, false = Signup
+let authMode = 'login'; // 'login', 'signup', 'forgot'
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
@@ -838,22 +841,52 @@ togglePasswordBtn.addEventListener('click', () => {
     }
 });
 
-authToggleBtn.addEventListener('click', (e) => {
-    e.preventDefault();
-    isLoginMode = !isLoginMode;
+function updateAuthUI() {
     authError.style.display = 'none';
 
-    if (isLoginMode) {
+    if (authMode === 'login') {
         authSubtitle.textContent = 'Sign in to manage your tasks';
         authToggleText.textContent = "Don't have an account?";
         authToggleBtn.textContent = 'Sign Up';
         authSubmitBtn.textContent = 'Sign In';
-    } else {
+        authPasswordLabel.textContent = 'Password';
+        authForgotPasswordBtn.style.display = 'inline-block';
+        authPassword.placeholder = '••••••••';
+    } else if (authMode === 'signup') {
         authSubtitle.textContent = 'Create a new account';
         authToggleText.textContent = 'Already have an account?';
         authToggleBtn.textContent = 'Log In';
         authSubmitBtn.textContent = 'Sign Up';
+        authPasswordLabel.textContent = 'Password';
+        authForgotPasswordBtn.style.display = 'none';
+        authPassword.placeholder = '••••••••';
+    } else if (authMode === 'forgot') {
+        authSubtitle.textContent = 'Reset your password';
+        authToggleText.textContent = 'Remembered your password?';
+        authToggleBtn.textContent = 'Log In';
+        authSubmitBtn.textContent = 'Reset Password';
+        authPasswordLabel.textContent = 'New Password';
+        authForgotPasswordBtn.style.display = 'none';
+        authPassword.placeholder = 'Enter new password';
     }
+}
+
+if (authForgotPasswordBtn) {
+    authForgotPasswordBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        authMode = 'forgot';
+        updateAuthUI();
+    });
+}
+
+authToggleBtn.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (authMode === 'login') {
+        authMode = 'signup';
+    } else {
+        authMode = 'login';
+    }
+    updateAuthUI();
 });
 
 authForm.addEventListener('submit', (e) => {
@@ -869,7 +902,7 @@ authForm.addEventListener('submit', (e) => {
     // Get users DB from local storage
     let users = JSON.parse(localStorage.getItem('novusUsers') || '{}');
 
-    if (isLoginMode) {
+    if (authMode === 'login') {
         // Handle Login
         if (users[email] && users[email] === password) {
             // Success
@@ -881,7 +914,7 @@ authForm.addEventListener('submit', (e) => {
         } else {
             showAuthError('Invalid email or password.');
         }
-    } else {
+    } else if (authMode === 'signup') {
         // Handle Sign Up
         if (users[email]) {
             showAuthError('An account with this email already exists.');
@@ -895,6 +928,19 @@ authForm.addEventListener('submit', (e) => {
             authError.style.display = 'none';
             initAuth();
             alert('Account created successfully!');
+        }
+    } else if (authMode === 'forgot') {
+        // Handle Forgot Password
+        if (users[email]) {
+            users[email] = password;
+            localStorage.setItem('novusUsers', JSON.stringify(users));
+            authMode = 'login';
+            updateAuthUI();
+            authPassword.value = '';
+            showAuthError(''); // Clear error
+            alert('Password reset successfully! You can now log in.');
+        } else {
+            showAuthError('No account found with this email address.');
         }
     }
 });
